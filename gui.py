@@ -98,7 +98,7 @@ class AutoClickerGUI:
         hotkey_label.grid(row=5, column=0, sticky=tk.W, pady=(10, 5))
         
         hotkey_frame = ttk.Frame(main_frame)
-        hotkey_frame.grid(row=6, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 20))
+        hotkey_frame.grid(row=6, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
         
         self.hotkey_input = ttk.Entry(hotkey_frame, width=15)
         self.hotkey_input.insert(0, self.config.get('hotkey', 'q'))
@@ -111,16 +111,32 @@ class AutoClickerGUI:
         self.hotkey_input.bind("<FocusOut>", self._on_hotkey_change)
         self.hotkey_input.bind("<Return>", self._on_hotkey_change)
         
+        # ===== Timing Mode Section =====
+        timing_label = ttk.Label(main_frame, text="Timing Mode", style='Heading.TLabel')
+        timing_label.grid(row=7, column=0, sticky=tk.W, pady=(10, 5))
+        
+        timing_frame = ttk.Frame(main_frame)
+        timing_frame.grid(row=8, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
+        
+        self.timing_var = tk.StringVar(value=self.config.get('timing_mode', 'balanced'))
+        timing_options = ['precision', 'balanced', 'aggressive']
+        timing_combo = ttk.Combobox(timing_frame, textvariable=self.timing_var, values=timing_options, state='readonly', width=12)
+        timing_combo.pack(side=tk.LEFT, padx=(0, 10))
+        timing_combo.bind('<<ComboboxSelected>>', self._on_timing_mode_change)
+        
+        timing_info = ttk.Label(timing_frame, text="Best for Roblox: Aggressive", style='Normal.TLabel')
+        timing_info.pack(side=tk.LEFT)
+        
         # ===== Status Section =====
         status_label = ttk.Label(main_frame, text="Status", style='Heading.TLabel')
-        status_label.grid(row=7, column=0, sticky=tk.W, pady=(10, 5))
+        status_label.grid(row=9, column=0, sticky=tk.W, pady=(10, 5))
         
         self.status_label = ttk.Label(main_frame, text="🔴 IDLE (Press hotkey to start)", style='Normal.TLabel')
-        self.status_label.grid(row=8, column=0, columnspan=2, sticky=tk.W, pady=(0, 20))
+        self.status_label.grid(row=10, column=0, columnspan=2, sticky=tk.W, pady=(0, 20))
         
         # ===== Control Buttons =====
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=9, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        button_frame.grid(row=11, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         self.toggle_button = ttk.Button(button_frame, text="Start (Press Q)", command=self._toggle_clicking)
         self.toggle_button.pack(side=tk.LEFT, padx=(0, 10))
@@ -130,9 +146,9 @@ class AutoClickerGUI:
         
         # ===== Info Section =====
         info_frame = ttk.LabelFrame(main_frame, text="Info", padding="10")
-        info_frame.grid(row=10, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        info_frame.grid(row=12, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
         
-        info_text = ttk.Label(info_frame, text="• Default hotkey: Q\n• Decimal support: Yes (e.g., 64.26)\n• Works with Roblox & Browsers", style='Normal.TLabel', justify=tk.LEFT)
+        info_text = ttk.Label(info_frame, text="• Default hotkey: Q\n• Decimal support: Yes (e.g., 64.26)\n• Aggressive mode has lowest latency for Roblox", style='Normal.TLabel', justify=tk.LEFT)
         info_text.pack(anchor=tk.W)
     
     def _validate_decimal_input(self, value, field_name):
@@ -214,6 +230,11 @@ class AutoClickerGUI:
         self.hotkey_input.delete(0, tk.END)
         self.hotkey_input.insert(0, value.lower())
     
+    def _on_timing_mode_change(self, event=None):
+        """Handle timing mode change"""
+        mode = self.timing_var.get()
+        self.autoclicker.set_timing_mode(mode)
+    
     def _toggle_clicking(self):
         """Toggle clicking on/off via button"""
         self.autoclicker.toggle_clicking()
@@ -223,6 +244,7 @@ class AutoClickerGUI:
         self.autoclicker.set_cps(10.0)
         self.autoclicker.set_cdc(100.0)
         self.autoclicker.set_hotkey('q')
+        self.autoclicker.set_timing_mode('balanced')
         
         self.cps_input.delete(0, tk.END)
         self.cps_input.insert(0, "10.0")
@@ -235,6 +257,8 @@ class AutoClickerGUI:
         self.hotkey_input.delete(0, tk.END)
         self.hotkey_input.insert(0, "q")
         self.hotkey_value_label.config(text="Current: q")
+        
+        self.timing_var.set('balanced')
         
         messagebox.showinfo("Reset", "Settings reset to defaults")
     

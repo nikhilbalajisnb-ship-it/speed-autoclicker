@@ -113,7 +113,7 @@ class AutoClicker:
             # Pre-delay: minimal, Post-delay: full delay split
             pre_delay = 0.001  # 1ms minimal pre-delay
             click_delay = 0.001  # Fast click registration
-            post_delay = cps_delay + cdc_delay - pre_delay
+            post_delay = max(0, cps_delay + cdc_delay - pre_delay)
             
         elif self.timing_mode == "aggressive":
             # Aggressive mode: Minimum latency, click first then wait
@@ -126,7 +126,7 @@ class AutoClicker:
             # Balanced mode: Good response with stability
             pre_delay = 0.0005  # 0.5ms pre-delay
             click_delay = 0.0005  # 0.5ms click response
-            post_delay = cps_delay + cdc_delay - pre_delay
+            post_delay = max(0, cps_delay + cdc_delay - pre_delay)
         
         return pre_delay, click_delay, post_delay
     

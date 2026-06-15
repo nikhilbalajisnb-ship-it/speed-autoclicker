@@ -3,5 +3,6 @@
   "cdc": 100.0,
   "hotkey": "q",
   "activation_key": "cmd",
+  "timing_mode": "balanced",
   "theme": "dark"
 }
