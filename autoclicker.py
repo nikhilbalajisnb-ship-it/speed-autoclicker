@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Core AutoClicker logic for macOS
-Handles clicking simulation and hotkey detection
+Handles clicking simulation and hotkey detection with optimized timing
 """
 
 import threading
@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 class AutoClicker:
-    """Main AutoClicker class for macOS"""
+    """Main AutoClicker class for macOS with optimized Roblox support"""
     
     def __init__(self, config):
         """
@@ -38,6 +38,7 @@ class AutoClicker:
         self.hotkey = config.get("hotkey", "q").lower()
         self.cps = config.get("cps", 10.0)
         self.cdc = config.get("cdc", 100.0)
+        self.timing_mode = config.get("timing_mode", "balanced")  # "precision", "balanced", "aggressive"
         
         # Start listening to keyboard
         self._start_listener()
@@ -96,24 +97,63 @@ class AutoClicker:
         """Stop the clicking thread"""
         self.is_clicking = False
     
-    def _click_loop(self):
-        """Main clicking loop"""
-        try:
-            # Calculate delay based on CPS
-            # CPS = Clicks Per Second
-            # Delay between clicks = (1 / CPS) * 1000 milliseconds
+    def _calculate_delays(self):
+        """
+        Calculate optimal delays based on timing mode
+        
+        Returns:
+            tuple: (pre_delay, click_delay, post_delay)
+        """
+        # CPS delay calculation
+        cps_delay = (1.0 / self.cps) if self.cps > 0 else 1.0
+        cdc_delay = self.cdc / 1000.0  # Convert milliseconds to seconds
+        
+        if self.timing_mode == "precision":
+            # Precision mode: Maximum accuracy, slight delay before click
+            # Pre-delay: minimal, Post-delay: full delay split
+            pre_delay = 0.001  # 1ms minimal pre-delay
+            click_delay = 0.001  # Fast click registration
+            post_delay = cps_delay + cdc_delay - pre_delay
             
-            cps_delay = (1.0 / self.cps) if self.cps > 0 else 1.0
-            cdc_delay = self.cdc / 1000.0  # Convert milliseconds to seconds
+        elif self.timing_mode == "aggressive":
+            # Aggressive mode: Minimum latency, click first then wait
+            # Best for Roblox - immediate feedback
+            pre_delay = 0.0  # No pre-delay
+            click_delay = 0.0  # Instant click
+            post_delay = cps_delay + cdc_delay
+            
+        else:  # balanced (default)
+            # Balanced mode: Good response with stability
+            pre_delay = 0.0005  # 0.5ms pre-delay
+            click_delay = 0.0005  # 0.5ms click response
+            post_delay = cps_delay + cdc_delay - pre_delay
+        
+        return pre_delay, click_delay, post_delay
+    
+    def _click_loop(self):
+        """Main clicking loop optimized for Roblox"""
+        try:
+            pre_delay, click_delay, post_delay = self._calculate_delays()
             
             while self.is_clicking:
-                # Perform click
-                self.mouse.click(Button.left, 1)
+                # Pre-click delay (minimal)
+                if pre_delay > 0:
+                    time.sleep(pre_delay)
                 
-                # Wait between clicks
-                # Total delay = CPS delay + CDC delay
-                total_delay = cps_delay + cdc_delay
-                time.sleep(total_delay)
+                # Perform click - use immediate approach for low latency
+                try:
+                    self.mouse.click(Button.left, 1)
+                except Exception:
+                    pass
+                
+                # Click registration delay
+                if click_delay > 0:
+                    time.sleep(click_delay)
+                
+                # Post-click delay (remaining time until next click)
+                if post_delay > 0:
+                    time.sleep(post_delay)
+                    
         except Exception as e:
             self.is_clicking = False
             if self.on_error_callback:
@@ -171,6 +211,22 @@ class AutoClicker:
         except ValueError as e:
             if self.on_error_callback:
                 self.on_error_callback(f"Invalid hotkey: {e}")
+    
+    def set_timing_mode(self, mode):
+        """
+        Set the timing mode for click registration
+        
+        Args:
+            mode (str): Timing mode - 'precision', 'balanced', or 'aggressive'
+        """
+        if mode not in ["precision", "balanced", "aggressive"]:
+            if self.on_error_callback:
+                self.on_error_callback("Invalid timing mode. Use: precision, balanced, or aggressive")
+            return
+        
+        self.timing_mode = mode
+        self.config['timing_mode'] = mode
+        self._save_config()
     
     def _save_config(self):
         """Save current configuration to config.json"""
