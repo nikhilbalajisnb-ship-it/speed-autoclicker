@@ -30,6 +30,7 @@ def load_config():
         "cdc": 100.0,
         "hotkey": "q",
         "activation_key": "cmd",
+        "timing_mode": "balanced",
         "theme": "dark"
     }
 
@@ -41,8 +42,8 @@ def main():
     # Create root window
     root = tk.Tk()
     root.title("Speed AutoClicker")
-    root.geometry("500x400")
-    root.resizable(False, False)
+    root.geometry("550x700")  # Larger default window
+    root.resizable(True, True)  # Allow resizing
     
     # Initialize AutoClicker
     autoclicker = AutoClicker(config)

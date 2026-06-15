@@ -49,22 +49,48 @@ class AutoClickerGUI:
     
     def _create_widgets(self):
         """Create all GUI widgets"""
-        # Main container
-        main_frame = ttk.Frame(self.root, padding="20")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Main container with scrollbar support
+        main_container = ttk.Frame(self.root)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+        
+        # Canvas for scrolling
+        canvas = tk.Canvas(main_container, highlightthickness=0, bg='#2b2b2b')
+        scrollbar = ttk.Scrollbar(main_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack scrollbar and canvas
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Enable mousewheel scrolling on Mac
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Main content frame
+        main_frame = ttk.Frame(scrollable_frame, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title
         title = ttk.Label(main_frame, text="Speed AutoClicker", style='Title.TLabel')
-        title.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        title.pack(pady=(0, 20))
         
         # ===== CPS Section =====
         cps_label = ttk.Label(main_frame, text="CPS (Clicks Per Second)", style='Heading.TLabel')
-        cps_label.grid(row=1, column=0, sticky=tk.W, pady=(10, 5))
+        cps_label.pack(anchor=tk.W, pady=(10, 5))
         
         cps_frame = ttk.Frame(main_frame)
-        cps_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
+        cps_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.cps_input = ttk.Entry(cps_frame, width=15)
+        self.cps_input = ttk.Entry(cps_frame, width=20)
         self.cps_input.insert(0, str(self.config.get('cps', 10.0)))
         self.cps_input.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -77,12 +103,12 @@ class AutoClickerGUI:
         
         # ===== CDC Section =====
         cdc_label = ttk.Label(main_frame, text="CDC (Click Delay ms)", style='Heading.TLabel')
-        cdc_label.grid(row=3, column=0, sticky=tk.W, pady=(10, 5))
+        cdc_label.pack(anchor=tk.W, pady=(10, 5))
         
         cdc_frame = ttk.Frame(main_frame)
-        cdc_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
+        cdc_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.cdc_input = ttk.Entry(cdc_frame, width=15)
+        self.cdc_input = ttk.Entry(cdc_frame, width=20)
         self.cdc_input.insert(0, str(self.config.get('cdc', 100.0)))
         self.cdc_input.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -95,12 +121,12 @@ class AutoClickerGUI:
         
         # ===== Hotkey Section =====
         hotkey_label = ttk.Label(main_frame, text="Hotkey (Single Key)", style='Heading.TLabel')
-        hotkey_label.grid(row=5, column=0, sticky=tk.W, pady=(10, 5))
+        hotkey_label.pack(anchor=tk.W, pady=(10, 5))
         
         hotkey_frame = ttk.Frame(main_frame)
-        hotkey_frame.grid(row=6, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
+        hotkey_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.hotkey_input = ttk.Entry(hotkey_frame, width=15)
+        self.hotkey_input = ttk.Entry(hotkey_frame, width=20)
         self.hotkey_input.insert(0, self.config.get('hotkey', 'q'))
         self.hotkey_input.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -112,31 +138,33 @@ class AutoClickerGUI:
         self.hotkey_input.bind("<Return>", self._on_hotkey_change)
         
         # ===== Timing Mode Section =====
-        timing_label = ttk.Label(main_frame, text="Timing Mode", style='Heading.TLabel')
-        timing_label.grid(row=7, column=0, sticky=tk.W, pady=(10, 5))
+        timing_label = ttk.Label(main_frame, text="Timing Mode (For Roblox)", style='Heading.TLabel')
+        timing_label.pack(anchor=tk.W, pady=(10, 5))
         
         timing_frame = ttk.Frame(main_frame)
-        timing_frame.grid(row=8, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 15))
+        timing_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.timing_var = tk.StringVar(value=self.config.get('timing_mode', 'balanced'))
-        timing_options = ['precision', 'balanced', 'aggressive']
-        timing_combo = ttk.Combobox(timing_frame, textvariable=self.timing_var, values=timing_options, state='readonly', width=12)
+        # Get current timing mode and capitalize it
+        current_mode = self.config.get('timing_mode', 'balanced').capitalize()
+        self.timing_var = tk.StringVar(value=current_mode)
+        timing_options = ['Precision', 'Balanced', 'Aggressive']
+        timing_combo = ttk.Combobox(timing_frame, textvariable=self.timing_var, values=timing_options, state='readonly', width=18)
         timing_combo.pack(side=tk.LEFT, padx=(0, 10))
         timing_combo.bind('<<ComboboxSelected>>', self._on_timing_mode_change)
         
-        timing_info = ttk.Label(timing_frame, text="Best for Roblox: Aggressive", style='Normal.TLabel')
+        timing_info = ttk.Label(timing_frame, text="⚡ Aggressive = Fastest (Roblox)", style='Normal.TLabel')
         timing_info.pack(side=tk.LEFT)
         
         # ===== Status Section =====
         status_label = ttk.Label(main_frame, text="Status", style='Heading.TLabel')
-        status_label.grid(row=9, column=0, sticky=tk.W, pady=(10, 5))
+        status_label.pack(anchor=tk.W, pady=(10, 5))
         
         self.status_label = ttk.Label(main_frame, text="🔴 IDLE (Press hotkey to start)", style='Normal.TLabel')
-        self.status_label.grid(row=10, column=0, columnspan=2, sticky=tk.W, pady=(0, 20))
+        self.status_label.pack(anchor=tk.W, pady=(0, 20))
         
         # ===== Control Buttons =====
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=11, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        button_frame.pack(fill=tk.X, pady=(0, 15))
         
         self.toggle_button = ttk.Button(button_frame, text="Start (Press Q)", command=self._toggle_clicking)
         self.toggle_button.pack(side=tk.LEFT, padx=(0, 10))
@@ -146,9 +174,9 @@ class AutoClickerGUI:
         
         # ===== Info Section =====
         info_frame = ttk.LabelFrame(main_frame, text="Info", padding="10")
-        info_frame.grid(row=12, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        info_frame.pack(fill=tk.X, pady=(10, 0))
         
-        info_text = ttk.Label(info_frame, text="• Default hotkey: Q\n• Decimal support: Yes (e.g., 64.26)\n• Aggressive mode has lowest latency for Roblox", style='Normal.TLabel', justify=tk.LEFT)
+        info_text = ttk.Label(info_frame, text="• Default hotkey: Q\n• Decimal support: Yes (e.g., 64.26)\n• Aggressive mode has lowest latency\n• Works with Roblox & Browsers", style='Normal.TLabel', justify=tk.LEFT)
         info_text.pack(anchor=tk.W)
     
     def _validate_decimal_input(self, value, field_name):
@@ -232,7 +260,7 @@ class AutoClickerGUI:
     
     def _on_timing_mode_change(self, event=None):
         """Handle timing mode change"""
-        mode = self.timing_var.get()
+        mode = self.timing_var.get().lower()
         self.autoclicker.set_timing_mode(mode)
     
     def _toggle_clicking(self):
@@ -258,7 +286,7 @@ class AutoClickerGUI:
         self.hotkey_input.insert(0, "q")
         self.hotkey_value_label.config(text="Current: q")
         
-        self.timing_var.set('balanced')
+        self.timing_var.set('Balanced')
         
         messagebox.showinfo("Reset", "Settings reset to defaults")
     
